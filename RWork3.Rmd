@@ -1,0 +1,166 @@
+---
+title: "RWork3"
+author: "Giacomo"
+date: "7/4/2021"
+output: html_document
+---
+##Exercises
+
+_4.4 Exercises_
+1. This code does not work because there is an 'l' instead of an 'i' in the word variable
+2. There were some errors in spelling and then the equal sign doesnt mean anything unless there are two.== actually means eaqual to. Also diamond doesnt exist as part of the object so the graph couldnt run it. 
+```{r}
+library(tidyverse)
+
+ggplot(data = mpg) + 
+  geom_point(mapping = aes(x = displ, y = hwy))
+  
+filter(mpg, cyl == 8)
+filter(diamond, carat > 3)
+
+
+
+```
+3. You get a menu of all of the shortcuts you can use. 
+
+_dplyr basics_
+* this chapter I will learn how to use the 5 key dplyr functions. 
+ - Pick observations by their values (filter()).
+ - Reorder the rows (arrange()).
+ - Pick variables by their names (select()).
+ - Create new variables with functions of existing variables (mutate()).
+ - Collapse many values down to a single summary (summarise()).
+
+_filter rows with filter()_
+* The first argument is the name of the frame. The second arguments are the expressions that filter the data frames
+* filter(flights, month == 1, day == 1)
+* if you want to assign that result then youd have to use the assigmnment operator.
+* to use the filtering effectively you must use the comparison operators(logical operators)
+* biggest mistake made is using = instead of ==.
+ - instead of relying on == you can use near as most things are an approximation.
+* Ask question about logical operators in filter function
+ _5.2.4_
+ 1. There are another 10,190 flights with an aribal delay over 2 hours.
+ > filter(flights, arr_delay >= 120)
+ 2. There were 9,303 flughts that flew to either IAH or to HOU.
+ > filter(flights, dest == "IAH" | dest == "HOU")
+ 2. The between function gives you results between 2 different values. 
+ 3. 8, 245 flights have a missing departure time 
+ > filter(flights, is.na(dep_time))
+ 4.NA is not missing because anything to the 0 power is 1. You are not missing NA because if is either NA or TRUE so you would get TRUE. You are not missing FALSE and NA because there is an alternative value to print. 
+_Arrange Rows with arrange()_
+* arrange() works similarly to filter() except that instead of selecting rows it changes their order.
+ _5.3.1_
+ 1. > arrange(flights, !is.na(dep_time))
+ 2. The flight that left the earliest left 43 minutes before it was supposed to. The longest delayed flight was 1301 minutes delayed.
+ 3. ?
+ 4. arrange(flights, distance) The shortest flight was 17 miles. The longest flight was 4983 miles. 
+_Select Columns with Sselect()_
+* Select allows you rapidly soom in on useful subsets using operations based on the names of variables.
+* select(flights, year, month, day)
+* you can also select all columns between two variables
+select(flights, year:day)
+* You can put the minus sign in front to not show particular variables.
+* There are a number of helper functions with select
+ - starts_with("abc"): matches names that begin with “abc”.
+ - ends_with("xyz"): matches names that end with “xyz”.
+ - contains("ijk"): matches names that contain “ijk”.
+ - matches("(.)\\1"): selects variables that match a regular expression. This one matches any variables that contain repeated characters. You’ll learn  more about regular expressions in strings.
+ - num_range("x", 1:3): matches x1, x2 and x3.
+* The everything command moves everything not selected. 
+ _ex_
+ - > select(flights, time_hour, air_time, everything())
+ _5.4.1_
+ 1. Well you can seperate them using the ':' or you could just name them all.
+ 2. If you include a variable multiple times then nothing happens. It just runs the command with the variable once.
+ 3. The any_of selects the variables from a character vector. ?
+ 4. When you run that command it gives you all the variables with time as part of their name.
+_Add new variables with mutate()_
+* Mutate adds new columns that are functions of existing columns
+* transmute flights only keeps new variables. 
+ _5.5.2_
+ 1.
+```{r}
+transmute(flights, dep_time, hour = dep_time %/% 100, minute = dep_time %% 100, final_time = hour * 60 + minute)
+```
+ 
+ 2. You would expect to see the time of arrival and then the difference between the arr. To fix it you would have to convert arr_time and dep_time to more calculable numbers. You would expect your time dif and you air time to be the same. They are not. 
+ 3. Dep time and sched dep time are both values that show HMM. So they show when they actually left vs when they were supposed to leave. The dep_delay is the difference.
+ 4. What is happening is 1 + 1 then 2 + 2 then3 + 3, then the first value runs out of integer and goes back to one so the 1 + 4 and so on.
+ 5. Takes all trig functions except atan2.
+_Grouped summaries with summarise()_
+* Summarise collapses a data frame into a single row.
+* Summarise is not terrible useful unless it is paired with group_by()
+ - If you use group by correctly you can get the average delay per each individual day.
+```{r}
+by_dest <- group_by(flights, dest)
+delay <- summarise(by_dest, count = n(), dist = mean(distance, na.rm = TRUE), delay = mean(arr_delay, na.rm = TRUE))
+delay <- filter(delay, count > 20, dest != "HNL")
+ggplot(data = delay, mapping = aes(x = dist, y = delay))+
+geom_point(aes(size = count), alpha = 1/3)+
+geom_smooth(se = FALSE)
+```
+```{r}
+delays <- flights %>%
+  group_by(dest) %>%
+  summarise(count =n(), dist = mean(distance, na.rm = TRUE), delay = mean(arr_delay, na.rm = TRUE))%>%
+  filter(count > 20, dest != "HNL")
+```
+```{r}
+not_cancelled <- flights %>%
+  filter(!is.na(dep_delay), !is.na(arr_delay))
+not_cancelled %>%
+  group_by(year, month, day) %>%
+  summarise(late = mean(dep_delay))
+```
+
+```{r}
+delays <- not_cancelled  %>%
+  group_by(tailnum) %>%
+  summarise(delay = mean(arr_delay), n = n())
+ggplot(data = delays, mapping = aes(x = n, y = delay)) +
+  geom_point(alpha = 1/10)
+```
+ 
+```{r}
+delays %>% 
+  filter(n > 25) %>% 
+  ggplot(mapping = aes(x = n, y = delay)) + 
+    geom_point(alpha = 1/10)
+```
+```{r}
+ not_cancelled %>%
+  group_by(carrier) %>%
+  summarise(dest_delay = mean(arr_delay), leave_delay = mean(dep_delay), ovr_score = dest_delay + leave_delay) %>%
+  arrange(desc(dest_delay), desc(leave_delay), desc(ovr_score))
+
+```
+5. The carrier with the worst delay times is frontier airlines. 
+```{r}
+not_cancelled %>%
+  group_by(carrier, dest) %>%
+  summarise(dest_delay = mean(arr_delay), leave_delay = mean(dep_delay), ovr_score = dest_delay + leave_delay) %>%
+  arrange(desc(dest_delay), desc(leave_delay), desc(ovr_score))
+```
+
+```{r}
+your_mom <- not_cancelled %>%
+  group_by(carrier, dest) %>%
+  summarise(dest_delay = mean(arr_delay), leave_delay = mean(dep_delay), ovr_score = dest_delay + leave_delay) %>%
+  arrange(desc(dest_delay), desc(leave_delay), desc(ovr_score))
+ggplot(data = your_mom, mapping = aes(x = dest, y = ovr_score, color = dest)) +
+         geom_point() +
+  facet_wrap(~ carrier, nrow = 4, ncol = 4)
+```
+```{r}
+flights %>%
+ count(dest)
+        
+```
+
+
+
+
+
+
+
