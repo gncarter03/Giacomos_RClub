@@ -18,7 +18,7 @@ ggplot(diamonds) +
 
 ```
 _7.3 Exercises_
-1. One thing I noticed about the districution of the the variables is that they all are pretty similar. The mean for the z, x, y for each cut are pretty similar. Z is most likely the depth of the diamond. I would say that length is probably y and x is most likely width. 
+1. One thing I noticed about the distribution of the the variables is that they all are pretty similar. The mean for the z, x, y for each cut are pretty similar. Z is most likely the depth of the diamond. I would say that length is probably y and x is most likely width. 
 ```{r}
 ggplot(data = diamonds, mapping = aes(x = x, binwidth = 0.1)) +
   geom_histogram()
@@ -30,10 +30,12 @@ diamonds%>%
   group_by(cut)%>%
   summarise(y1 = mean(y), x1 = mean(x), z1 = mean(z)) 
 ```
-2. It looked pretty normal. The amount of diamonds worth 10,000 dollars is much lower than it is at around 1000 dollars. One suprising thing is that there is a gap at 1500 or 1000 and I do not know what thats from.  
+2. It looked pretty normal. The amount of diamonds worth 10,000 dollars is much lower than it is at around 1000 dollars. One surprising thing is that there is a gap at 1500 and I do not know what that's from.  
 ```{r}
 ggplot(data = diamonds, mapping = aes (x = price)) +
-geom_histogram(binwidth = 10) +
+geom_histogram(binwidth = 10)
+
+
 coord_cartesian(ylim = c(0, 40))
 ```
 3. The main factors that effect whether a diamond is 1 carat or 0.99 carats are color and clarity. 1 carat all are very similar. The number of carats at 0.99 are 23 and the number of carats at 1 are 1558. Things about this logically the difference cannot be that great because then there would be more diamonds at carat .99 
@@ -51,19 +53,19 @@ diamonds %>%
 ```{r}
 ggplot(data = diamonds, mapping = aes (x = price)) +
    geom_histogram(binwidth = 1/2) +
-   coord_cartesian(ylim = c(0, 100))
+   ylim = c(0, 100)
 ```
 ```{r}
 library(nycflights13)
 nycflights13::flights %>%
   mutate( cancelled = is.na(dep_time), sched_hour = sched_dep_time %/% 100, sched_min = sched_dep_time %% 100, sched_dep_time = sched_hour + sched_min / 60) %>%
-  ggplot(mapping = aes(sched_dep_time)) +
-  geom_boxplot(mapping = aes(color = cancelled), bindwidth = 1/4)
+  ggplot(mapping = aes(x = sched_dep_time, y = ..density..)) +
+  geom_bar(mapping = aes(color = cancelled), bindwidth = 1/4)
 
 
 ```
 _7.4.1 Exercises_
-1. The NA calues do not go any where in a histogram because they are not numeric. They cannot be represented as they are not a number. On the other hand a bar graph takes categorical data. In a bar graph NA is just another category to graph.  
+1. The NA values do not go any where in a histogram because they are not numeric. They cannot be represented as they are not a number. On the other hand a bar graph takes categorical data. In a bar graph NA is just another category to graph.  
 
 2. na.rm = TRUE in mean and sum would make sure the mean or sum is not cancelled with an NA value. Because when you preform these values adding an NA would give you a missing number as the answer.
 
@@ -88,11 +90,11 @@ diamonds%>%
 ggplot(mapping = aes(x = cut, color = cut)) +
   geom_bar()+
   geom_errorbar(xmin = 0, xmax = 60, ymin = 0, ymax = 10000)
-ggplot(data = diamonds, mapping = aes(x = cut, y = price, color = cut)) +
-  geom_boxploth()
+ggplot(data = diamonds) +
+  geom_boxploth( mapping = aes(x = cut, y = price, color = cut))
 ```
 
-5. A geom_violin() is different because it is a continuous line, much like the freqpoly, but it is curved. The freq violin is more linear with harsh edges. The histogram is different then the violin because the violin takes two differnt axis. I think in general they are showing you different things. The histo is showing you the number of counts. The violin is showing you the number of things at a particular point. And the frequency plot is showing you the differences in values between two variables. 
+5. A geom_violin() is different because it is a continuous line, much like the freqpoly, but it is curved. The freq violin is more linear with harsh edges. The histogram is different then the violin because the violin takes two different axis. I think in general they are showing you different things. The histogram is showing you the number of counts. The violin is showing you the number of things at a particular point. And the frequency plot is showing you the differences in values between two variables. 
 ```{r}
 ggplot(data = diamonds, mapping = aes(x = carat)) +
      geom_histogram()    
