@@ -1,0 +1,118 @@
+---
+title: "Week4R"
+author: "Giacomo"
+date: "7/7/2021"
+output: html_document
+---
+```{r}
+ggplot(data = diamonds) +
+  geom_bar(mapping = aes(x = cut))
+diamonds%>%
+  count(cut)
+```
+
+```{r}
+ggplot(diamonds) + 
+  geom_histogram(mapping = aes(x = y), binwidth = 0.5) +
+  coord_cartesian(ylim = c(0, 50))
+
+```
+_7.3 Exercises_
+1. One thing I noticed about the districution of the the variables is that they all are pretty similar. The mean for the z, x, y for each cut are pretty similar. Z is most likely the depth of the diamond. I would say that length is probably y and x is most likely width. 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = x, binwidth = 0.1)) +
+  geom_histogram()
+ggplot(data = diamonds, mapping = aes (x = y)) +
+  geom_histogram(binwidth = .5)
+ggplot(data = diamonds, mapping = aes (x = z)) +
+  geom_histogram(binwidth = .5) 
+diamonds%>% 
+  group_by(cut)%>%
+  summarise(y1 = mean(y), x1 = mean(x), z1 = mean(z)) 
+```
+2. It looked pretty normal. The amount of diamonds worth 10,000 dollars is much lower than it is at around 1000 dollars. One suprising thing is that there is a gap at 1500 or 1000 and I do not know what thats from.  
+```{r}
+ggplot(data = diamonds, mapping = aes (x = price)) +
+geom_histogram(binwidth = 10) +
+coord_cartesian(ylim = c(0, 40))
+```
+3. The main factors that effect whether a diamond is 1 carat or 0.99 carats are color and clarity. 1 carat all are very similar. The number of carats at 0.99 are 23 and the number of carats at 1 are 1558. Things about this logically the difference cannot be that great because then there would be more diamonds at carat .99 
+```{r}
+carat_size <- diamonds %>%
+  filter(carat == 0.99 | carat == 1) %>%
+  select(cut, price, color, clarity, carat, x, y, z) %>%
+  arrange(carat, color, clarity, cut, x, y, z)
+carat_size
+diamonds %>%
+  filter(carat == .99 | carat == 1) %>%
+  count(carat)
+```
+4. As the name suggests the x lim allows you to give values to the x axis which allows you to see the graph in a dif light. y limit lets you see differences in the length of the bars of the histogram. How they differ. When bind with is unset if gives you very large bins. It seems like mine were around 1000.If you zoom to half a bar then you see very little information. 
+```{r}
+ggplot(data = diamonds, mapping = aes (x = price)) +
+   geom_histogram(binwidth = 1/2) +
+   coord_cartesian(ylim = c(0, 100))
+```
+```{r}
+library(nycflights13)
+nycflights13::flights %>%
+  mutate( cancelled = is.na(dep_time), sched_hour = sched_dep_time %/% 100, sched_min = sched_dep_time %% 100, sched_dep_time = sched_hour + sched_min / 60) %>%
+  ggplot(mapping = aes(sched_dep_time)) +
+  geom_boxplot(mapping = aes(color = cancelled), bindwidth = 1/4)
+
+
+```
+_7.4.1 Exercises_
+1. The NA calues do not go any where in a histogram because they are not numeric. They cannot be represented as they are not a number. On the other hand a bar graph takes categorical data. In a bar graph NA is just another category to graph.  
+
+2. na.rm = TRUE in mean and sum would make sure the mean or sum is not cancelled with an NA value. Because when you preform these values adding an NA would give you a missing number as the answer.
+
+```{r}
+ggplot(data = diamonds, mapping = aes(x = reorder(cut, price, FUN = median), y = price, color = cut)) +
+  geom_boxplot()
+```
+_7.5.1.1 Exercises_
+1. The revised graph is above.
+2. basically the idea behind why fair diamonds tend to have a higher price on average has to do with their size/weight. On average large diamonds tend to be lower quality, but they also happen to be more rare which makes them more expensive. So the way the trend shows is that the more premium the cut the lesser the weight. 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = reorder(cut, carat, FUN = median), y = carat, color = cut)) +
+  geom_boxplot()
+
+diamonds%>%
+  group_by(cut)%>%
+  summarise(mean_carat = mean(carat), mean_price = mean(price))
+```
+3. I dont know if I did something in correct here but it is just giving me the median values of the box plots and not the boxes themselves. So that is one difference I noted. 
+```{r}
+diamonds%>%
+ggplot(mapping = aes(x = cut, color = cut)) +
+  geom_bar()+
+  geom_errorbar(xmin = 0, xmax = 60, ymin = 0, ymax = 10000)
+ggplot(data = diamonds, mapping = aes(x = cut, y = price, color = cut)) +
+  geom_boxploth()
+```
+
+5. A geom_violin() is different because it is a continuous line, much like the freqpoly, but it is curved. The freq violin is more linear with harsh edges. The histogram is different then the violin because the violin takes two differnt axis. I think in general they are showing you different things. The histo is showing you the number of counts. The violin is showing you the number of things at a particular point. And the frequency plot is showing you the differences in values between two variables. 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = carat)) +
+     geom_histogram()    
+```
+6. geom_beeswarm seemed to show more information then geom_jitter but jitter seemed to show better information. 
+```{r}
+ggplot(data = diamonds, mapping = aes(x = price, y = depth)) +
+  geom_jitter()
+```
+
+7. In an experiment where you were looking at specific plants and how many times they use each specific known gene you can plot that on one of the 2 categorical graphs. 
+8. If you were looking at the length of a gene vs the number of times it was expressed. 
+```{r}
+library(tidyverse)
+
+ggplot(diamonds, aes(carat, price)) + 
+  geom_hex() 
+ggsave("diamonds2.pdf")
+
+write_csv(diamonds, "diamonds.csv")
+```
+
+
