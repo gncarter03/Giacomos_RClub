@@ -120,6 +120,8 @@ sample.description
 
 ```
 
+
+
 ```{r}
 library(edgeR)
 counts.matrix <- counts.data %>% 
@@ -149,6 +151,13 @@ boxplot(counts.data.log)
 ```
 1. The one thing I noticed is that the data that was not normalized had a lot more variation then the one that was normalized. Another important point is that the numbers were a lot more spread in the non-normalized data.
 2. Hint 3 - You need yo use this in log2 because it is using the data from counts.data which has the Gene ID column.
+
+```{r}
+design <- model.matrix(~gt+trt,data = sample.description)
+rownames(design) <- sample.description$sample
+design
+```
+
 _Exercise 9_
 ```{r}
 #First the overall dispersion
@@ -163,6 +172,7 @@ dge.data <- estimateGLMTagwiseDisp(dge.data,design)
 #We can examine this with a plot
 plotBCV(dge.data)
 ```
+
 ```{r}
 fit <- glmFit(dge.data, design)
 gt.lrt <- glmLRT(fit, coef = "gtR500")
@@ -172,6 +182,9 @@ topTags(gt.lrt)
 summary(decideTestsDGE(gt.lrt,p.value=0.01))
 DEgene.gt <- topTags(gt.lrt,n = Inf,p.value = 0.01)$table
 write.csv(DEgene.gt, "../Assignment_09/DEgenes.gt.csv")
+```
+
+```{r}
 
 DEgene.gt.all <- topTags(gt.lrt,n = Inf,p.value = 0.01)$table
 write.csv(DEgene.gt.all, "../Assignment_09/DEgenes.gt.csv")
