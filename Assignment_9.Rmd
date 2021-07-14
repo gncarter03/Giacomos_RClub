@@ -1,0 +1,236 @@
+---
+title: "Assignment"
+author: "Giacomo"
+date: "7/8/2021"
+output: html_document
+---
+
+_Exercise 0_
+```{r}
+eval(FALSE)
+bnames10 %>% str_detect("A")
+
+bnames10 %>% str_subset("th")
+
+bnames10 %>% str_extract("th")
+
+test <- c("has.a.period", "has_no_period", "hasNoPunctuation")
+test %>% str_detect(".")
+
+bnamesearly %>% str_subset(fixed("ez"))
+```
+
+```{r}
+library(Rsubread)
+readCounts <- featureCounts(
+  files=c("../assigment_8/output/tophat_out-IMB211_All_A01_INTERNODE.fq/accepted_hits_A01.bam",
+    "../assigment_8/output/tophat_out-R500_All_A01_INTERNODE.fq/accepted_hits_A01.bam"),
+  annot.ext="../Assignment_09/Brapa_reference/Brapa_gene_v1.5.gtf", 
+  isGTFAnnotationFile=TRUE,
+  GTF.featureType="CDS", # This depends on GTF file.  Often it would be "exon"
+  GTF.attrType="gene_id"
+  )
+```
+_Exercise 1_
+1.
+```{r}
+head(readCounts$counts)
+```
+2. 
+```{r}
+readCounts$counts["Bra011030",]
+
+```
+3.
+```{r}
+readCounts$stat
+total_counts <- readCounts$stat[,c(2, 3)] %>%
+  colSums() 
+readCounts$stat[1 , c(2, 3)] / total_counts * 100
+total_unassigned <- readCounts$stat[c(12, 14),c(2, 3)] %>%
+  colSums()
+total_unassigned / total_counts * 100
+
+```
+4. The reason some of the maps could be unassigned could be because they were equally nicely mapped at two points which means the computer is unable to decipher which point fits better. No features just means that there were no points that really matched with any of the reference genome. Because of how many reads are said to be there I doubt it is just a mistake. It probably has something to do with a mistake in the quality control. 
+
+
+_Exercise 2_
+1.
+```{r}
+library(tidyverse)
+counts.data <- read_tsv("../Assignment_09/input/gh_internode_counts2.tsv")
+counts.data
+```
+2. The data makes sense to me. I dont know if there is something that is out of place or different. I noticed the `*` and the NA values which are a bit odd. It could simply mean 0. 
+```{r}
+counts.data <- counts.data %>% filter(gene_id!="*")
+counts.data[is.na(counts.data)] <- 0
+counts.data
+```
+_Exercise 3_
+1.
+```{r}
+data(iris)
+colnames(iris)
+colnames(iris) <- str_replace(colnames(iris), fixed("."), " ")
+colnames(iris)
+```
+
+```{r}
+colnames(counts.data)
+colnames(counts.data) <- str_replace(colnames(counts.data), fixed(".1_matched.merged.fq.bam"), "")
+colnames(counts.data)
+counts.data
+
+```
+
+_Exercise 5_
+```{r}
+pairs_counts <- counts.data[, -1]
+pairs_counts
+pair.counts <- pairs_counts[1:1000,]
+pairs(pair.counts)
+
+
+```
+```{r}
+cor(pair.counts)
+
+```
+1. The pairs image is difficult to read so I am not 100% sure what it means. The cor() image is showing the correlations between each of the samples numerically. I just realized that the pairs image is doing the same just as an image. 
+
+_Exercise 6_
+```{r}
+sample.description <- tibble(sample=colnames(counts.data)[-1])
+sample_seperation <- sample.description %>%
+  mutate(gt = str_extract(sample, "IMB211|R500"),
+         trt = str_extract(sample, "DP|NDP"),
+         group = str_c(gt, trt, sep = "_"))
+
+sample_seperation
+
+sample.description <- sample_seperation %>%
+  mutate(gt=factor(gt),
+         trt=factor(trt,levels = c("NDP","DP"))
+         ) 
+        
+
+sample.description 
+
+```
+
+```{r}
+library(edgeR)
+counts.matrix <- counts.data %>% 
+  select(-gene_id) %>% 
+  as.matrix()
+rownames(counts.matrix) <- counts.data$gene_id
+
+dge.data <- DGEList(counts=counts.matrix, 
+                    group=sample.description$group)
+dim(dge.data) 
+dge.data <- calcNormFactors(dge.data, method = "TMM")
+dge.data$samples 
+```
+```{r}
+plotMDS(dge.data, method = "bcv")
+```
+_Exercise 7_ 
+I would say the NDS plot is not super concerning because it is showing that most of the same samples are pretty close to one another.
+
+_Exercise 8_
+```{r}
+counts.data.normal <- cpm(dge.data)
+counts.data.normal.log <- cpm(dge.data,log = TRUE)
+counts.data.log <- log2(counts.data[,-1] + 1)
+boxplot(counts.data.normal.log)
+boxplot(counts.data.log)
+```
+1. The one thing I noticed is that the data that was not normalized had a lot more variation then the one that was normalized. Another important point is that the numbers were a lot more spread in the non-normalized data.
+2. Hint 3 - You need yo use this in log2 because it is using the data from counts.data which has the Gene ID column.
+_Exercise 9_
+```{r}
+#First the overall dispersion
+dge.data <- estimateGLMCommonDisp(dge.data,design,verbose = TRUE)
+
+#Then a trended dispersion based on count level
+dge.data <- estimateGLMTrendedDisp(dge.data,design)
+
+#And lastly we calculate the gene-wise dispersion, using the prior estimates to "squeeze" the dispersion towards the common dispersion.
+dge.data <- estimateGLMTagwiseDisp(dge.data,design)
+
+#We can examine this with a plot
+plotBCV(dge.data)
+```
+```{r}
+fit <- glmFit(dge.data, design)
+gt.lrt <- glmLRT(fit, coef = "gtR500")
+topTags(gt.lrt)
+```
+```{r}
+summary(decideTestsDGE(gt.lrt,p.value=0.01))
+DEgene.gt <- topTags(gt.lrt,n = Inf,p.value = 0.01)$table
+write.csv(DEgene.gt, "../Assignment_09/DEgenes.gt.csv")
+
+DEgene.gt.all <- topTags(gt.lrt,n = Inf,p.value = 0.01)$table
+write.csv(DEgene.gt.all, "../Assignment_09/DEgenes.gt.csv")
+```
+```{r}
+plotDE <- function(genes, dge, sample.description) {
+  require(ggplot2)
+  tmp.data <- t(log2(cpm(dge[genes,])+1))
+  tmp.data <- tmp.data %>%
+    as.data.frame() %>%
+    rownames_to_column("sample") %>%
+    left_join(sample.description,by="sample")
+  tmp.data <- tmp.data %>%
+    pivot_longer(cols=starts_with("Bra"), values_to = "log2_cpm", names_to = "gene")
+  pl <- ggplot(tmp.data,aes(x=gt,y=log2_cpm,fill=trt))
+  pl <- pl + facet_wrap( ~ gene)
+  pl <- pl + ylab("log2(cpm)") + xlab("genotype")
+  pl <- pl + geom_boxplot()
+  pl + theme(axis.text.x  = element_text(angle=45, vjust=1,hjust=1))
+}
+
+plotDE("Bra009785",dge.data,sample.description)
+plotDE(rownames(DEgene.gt)[1:9],dge.data,sample.description)
+```
+1. & 3. 
+```{r}
+fit <- glmFit(dge.data, design)
+trtDP.lrt <- glmLRT(fit, coef = "trtDP")
+topTags(trtDP.lrt)
+
+summary(decideTestsDGE(trtDP.lrt,p.value=0.01))
+DEgene.trtDP <- topTags(trtDP.lrt,n = Inf,p.value = 0.01)$table
+write.csv(DEgene.trtDP, "../Assignment_09/DEgenes.trt.csv")
+
+DEgene.trtDP.all <- topTags(trtDP.lrt,n = Inf,p.value = 0.01)$table
+write.csv(DEgene.trtDP.all, "../Assignment_09/DEgenes.trtDP.csv")
+
+
+plotDE <- function(genes, dge, sample.description) {
+  require(ggplot2)
+  tmp.data <- t(log2(cpm(dge[genes,])+1))
+  tmp.data <- tmp.data %>%
+    as.data.frame() %>%
+    rownames_to_column("sample") %>%
+    left_join(sample.description,by="sample")
+  tmp.data <- tmp.data %>%
+    pivot_longer(cols=starts_with("Bra"), values_to = "log2_cpm", names_to = "gene")
+  pl <- ggplot(tmp.data,aes(x=gt,y=log2_cpm,fill=trt))
+  pl <- pl + facet_wrap( ~ gene)
+  pl <- pl + ylab("log2(cpm)") + xlab("treatment")
+  pl <- pl + geom_boxplot()
+  pl + theme(axis.text.x  = element_text(angle=45, vjust=1,hjust=1))
+}
+
+plotDE("Bra028803",dge.data,sample.description)
+plotDE(rownames(DEgene.trtDP)[1:9],dge.data,sample.description)
+
+
+```
+2. 573 genes were differentially expressed.
+
+
